@@ -1,0 +1,229 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login Page</title>
+    <style>
+        body {
+          font-family: 'Poppins', sans-serif;
+          margin: 0;
+          padding: 0;
+          background-image: url("https://miro.medium.com/v2/resize:fit:3840/1*etDJsZIWf76sb1P_l6ZW3w.gif");
+          background-color: #cccccc;
+          height: 500px;
+          background-position: center;
+          background-repeat:no-repeat;
+          background-size: cover;
+          display: flex;
+          flex-direction: column;
+          justify-content: flex-start;
+          align-items: flex-start;
+          min-height: 100vh;
+        }
+    
+        h1 {
+          font-family: 'Playfair Display', serif;
+          font-size: 3em;
+          font-weight: bold;
+          color: #fdfdfd;
+          background-color: #95a8bb;
+          padding: 20px;
+          border-radius: 10px;
+          box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+          margin-bottom: 40px; /* Adjusted margin for more space */
+        }
+    
+        form {
+          background-color: #95a8bb;
+          padding: 30px;
+          border-radius: 12px;
+          box-shadow: 0 0 15px rgba(0, 0, 0, 0.2);
+          width: 300px;
+          text-align: left;
+          margin-top: 40px; /* Added margin for more space */
+          margin-left: 7em;
+        }
+    
+        label {
+          display: block;
+          margin-bottom: 10px;
+          background-color: #212224;
+          font-weight: bold;
+          color: #ffffff;
+          padding: 8px;
+          border-radius: 5px;
+        }
+    
+        input {
+          width: calc(100% - 16px);
+          padding: 10px;
+          margin-bottom: 15px;
+          box-sizing: border-box;
+        }
+    
+        #imagePreview {
+          margin-bottom: 15px;
+        }
+    
+        button {
+          background-color: #3498db;
+          color: #fff;
+          padding: 12px 20px;
+          border: none;
+          border-radius: 8px;
+          cursor: pointer;
+        }
+    
+        #response {
+          margin-top: 15px;
+          color: #333;
+        }
+        #tagger-view{
+          display: none;
+        }
+        #tagcloudid{
+          display: none;
+        }
+      </style>
+</head>
+<body>
+  <h1>Image Tags Generator</h1>
+    <div id="Login-view">
+        <form id="loginform" onsubmit="login(); return false;">
+            <label for="Email">Email:</label>
+            <input type="text" name="email" id="email" required>
+            <br>
+            <label for="password">Password:</label>
+            <input type="password" name="password" id="password" required>
+            <br>
+            <label for="prompt" id="loginprompt"></label>
+            <button type="submit">Login\Signup(Auto Account Creation)</button>
+        </form>
+    </div>
+    <div id="tagger-view">
+        <form id="uploadForm" enctype="multipart/form-data" onsubmit="uploadData();  return false;">
+            <br>
+            <label for="imageInput">Image:</label>
+            <input type="file" id="imageInput" name="image" accept="image/*" required onchange="displayImage()">
+            <br>
+            <div id="imagePreview"></div>
+            <br>
+            <div for="tags" id="tags"></div>
+            <br>
+            <label for="cloud tag" id="tagcloudid">Tags Cloud</label>
+            <br>
+            <div id="tagscloud"></div>
+            <br>
+            <button type="submit" >Generate Tags</button>
+          </form>
+    </div>
+
+    <script>
+        // Your JavaScript code goes here
+    const cloudFunctionUrl = 'https://us-central1-green-wares-399602.cloudfunctions.net/function-1'; 
+        var email='';
+        var imgdata;
+        async function login(){
+          console.log("in login")
+            email = document.getElementById("email").value;
+            var password = document.getElementById("password").value;
+            const formData = new FormData();
+            const currentOrigin = window.location.origin
+            formData.append('email', email);
+            formData.append('password', password);
+            formData.append('stat',1);
+            console.log(formData);
+            var jsonobject = {};
+            formData.forEach(function(value, key){
+              jsonobject[key] = value;
+            })
+            console.log(jsonobject);
+            var jsondataa = JSON.stringify(jsonobject);
+            console.log(jsondataa);
+            const response = await fetch( cloudFunctionUrl,{
+                method:'POST',
+                body:jsondataa,
+                headers: {
+                  'Content-Type': 'application/json'
+                }
+            });
+            var cloudFunctionResult = await response.text();
+            console.log('Cloud Function Response HTML:', cloudFunctionResult);
+            if(cloudFunctionResult === "authenticUser"){
+              document.getElementById("Login-view").style.display="none";
+              document.getElementById("tagger-view").style.display="block";
+            }
+            else{
+              alert("invalid User Credentials")
+            }
+      
+            
+            
+        }
+        function encodeImageToBase64(imagePath) {
+          const imageBuffer = fs.readFileSync(imagePath);
+          return imageBuffer.toString('base64');
+        }
+        function displayImage() {
+          const fileInput = document.getElementById('imageInput');
+          const file = fileInput.files[0];
+    
+          if (file) {
+            const imageUrl = URL.createObjectURL(file);
+            //imgdata = encodeImageToBase64(imageUrl);
+            fetch(imageUrl)
+            .then(response => response.blob())
+            .then(blob => {
+              // Convert the blob to base64
+              const reader = new FileReader();
+              reader.onloadend = () => {
+                const base64String = reader.result;
+                //console.log(base64String);
+                // Now you can use the base64String as needed
+                imgdata = base64String.split(",")[1];
+              };
+              reader.readAsDataURL(blob);
+            })
+            .catch(error => console.error('Error fetching image:', error));
+            // Display the image preview
+            document.getElementById('imagePreview').innerHTML = `<img src="${imageUrl}" alt="Uploaded Image" style="max-width: 100%; max-height: 200px;">`;
+          }
+        }
+        async function uploadData() {
+              
+          const fileInput = document.getElementById('imageInput');
+          const file = fileInput.files[0];
+          //console.log(typeof(file));
+          //console.log(imgdata);
+          const formData = new FormData();
+          formData.append('stat', 2);
+          formData.append('file', imgdata);
+          formData.append("email",email);
+          const formDataJson = {};
+            formData.forEach((value, key) => {
+            formDataJson[key] = value;
+          });
+          var jsonstr = JSON.stringify(formDataJson);
+          const response = await fetch( cloudFunctionUrl,{
+                method:'POST',
+                body:jsonstr,
+                headers: {
+                  'Content-Type': 'application/json'
+                }
+            });
+            var cloudFunctionResult = await response.text();
+            console.log('Cloud Function Response HTML:', cloudFunctionResult);
+            var currTags = cloudFunctionResult.split(":")[0];
+            var tags = cloudFunctionResult.split(":")[1];
+            var tagscloudURL = "https://quickchart.io/wordcloud?text="+tags+"&width=400&height=400&backgroundColor=black";
+            document.getElementById("tags").textContent=currTags;
+            document.getElementById("tags").style.backgroundColor="black";
+            document.getElementById("tags").style.color="white";
+            document.getElementById('tagscloud').innerHTML = `<img src="${tagscloudURL}" alt="Tags Cloud" style="max-width: 100%; max-height: 200px;">`;
+            document.getElementById('tagcloudid').style.display="block";
+        }
+      </script>
+
+</body>
+</html>
